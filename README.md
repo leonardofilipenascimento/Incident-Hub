@@ -37,8 +37,15 @@ docker compose exec backend php artisan db:seed --force
 Rodar a suíte de testes automatizados dentro do container:
 
 ```bash
-docker compose exec backend php artisan test
+docker compose exec backend ./vendor/bin/phpunit
 ```
+
+> `php artisan test` (o runner com saída "bonita" do Collision) apresenta warnings de
+> `file_get_contents` nesta imagem, mas os testes de fato passam — use `./vendor/bin/phpunit`
+> diretamente, que roda limpo (26/26 OK).
+
+O banco de teste dedicado (`incident_hub_test`) é criado automaticamente pelo script em
+`mysql/init/`, executado pelo container MySQL apenas na primeira inicialização do volume.
 
 Parar os containers (mantendo os dados no volume):
 
@@ -62,6 +69,14 @@ php artisan serve
 
 API disponível em `http://localhost:8000/api`.
 
+Para rodar os testes localmente, crie também um banco dedicado (`incident_hub_test`) e conceda
+acesso ao mesmo usuário configurado no `.env`:
+
+```sql
+CREATE DATABASE incident_hub_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+GRANT ALL PRIVILEGES ON incident_hub_test.* TO 'incident_hub'@'localhost';
+```
+
 ### Frontend
 
 ```bash
@@ -76,7 +91,7 @@ Aplicação disponível em `http://localhost:3000`.
 
 ```bash
 cd backend
-php artisan test
+./vendor/bin/phpunit
 ```
 
 Testes de contrato e de regra de negócio ficam em `backend/tests/Feature/Incidents/`, um arquivo por área do contrato (criação, listagem, detalhe, transição de status, alteração de severidade).

@@ -131,3 +131,25 @@ O desenvolvedor apontou que o planejamento inicial não incluía containerizaç�
 - Nenhuma relacionada a este ciclo. Containers seguem rodando localmente para inspeção do desenvolvedor.
 
 **Nenhuma sugestão foi rejeitada nesta etapa**, além da correção do próprio erro de build (`--no-dev` revertido).
+
+---
+
+## [06] Correção: testes não rodavam dentro do container
+
+**Data:** 2026-09-05
+
+**Contexto:**
+Ao validar "está tudo certo na API?", tentei rodar a suíte de testes dentro do container (`docker compose exec backend php artisan test`) e encontrei dois problemas reais que não haviam sido verificados na entrada [05].
+
+**Decisões e ações tomadas:**
+- `backend/.dockerignore` excluía o diretório `tests/` inteiro (herdado de um padrão genérico de "não copiar coisa de dev para produção"), impedindo qualquer execução de teste dentro da imagem — contradição direta com o que o `README.md` da entrada [05] já prometia. Corrigido removendo `tests` do `.dockerignore`.
+- `phpunit.xml` fixava `DB_HOST=127.0.0.1`, `DB_PORT`, `DB_USERNAME` e `DB_PASSWORD` como valores hardcoded — funciona fora do container (MySQL local), mas dentro do container `backend` não existe MySQL em `127.0.0.1` (o MySQL é outro container, acessível pelo nome de serviço `mysql` na rede Docker). Corrigido: `phpunit.xml` agora só força (`force="true"`) `DB_CONNECTION` e `DB_DATABASE=incident_hub_test` — garantindo que os testes **nunca** rodem contra o banco de desenvolvimento/demo, mas deixando `DB_HOST`/`DB_PORT`/`DB_USERNAME`/`DB_PASSWORD` herdarem do ambiente real (`.env` local ou variáveis do `docker-compose.yml`), que já usam as mesmas credenciais do usuário `incident_hub` nos dois contextos.
+- O banco `incident_hub_test` não existia no MySQL do container (só no MySQL local do host) e o usuário `incident_hub` não tinha permissão sobre ele. Criado `mysql/init/01-test-database.sql`, montado em `/docker-entrypoint-initdb.d` no `docker-compose.yml`, para que qualquer volume novo já nasça com o banco de teste configurado. Como o volume atual já existia (scripts de init só rodam em volume vazio), apliquei a mesma criação manualmente no container já rodando, para não exigir `docker compose down -v` (que apagaria os dados seedados) só para validar.
+- **Achado não corrigido, documentado como comportamento conhecido:** `php artisan test` (runner do Collision/Pest-style) produz warnings `file_get_contents(...)` para quase todos os testes dentro desta imagem Alpine, embora as asserções passem (`proc_open` e `sys_get_temp_dir()` verificados e funcionais — causa raiz não identificada, possivelmente relacionada a como o printer do Collision lida com arquivos temporários em Alpine). `./vendor/bin/phpunit` roda a mesma suíte de forma limpa (26/26 OK), tanto local quanto no container. Decisão: documentar e usar `./vendor/bin/phpunit` como comando oficial de teste em vez de investigar/consertar o printer do `artisan test` — não afeta a corretude da suíte, só a apresentação do output, e não vale o tempo de investigação adicional num contexto de hackathon.
+- `README.md` atualizado: comando de testes trocado para `./vendor/bin/phpunit` (local e Docker), e adicionado passo de criação do banco `incident_hub_test` na seção de execução local (que não estava documentado antes, apesar de ser um pré-requisito real desde a entrada [03]).
+- Validado: 26/26 testes passando tanto localmente quanto dentro do container `backend`, sem afetar os dados de demonstração já seedados no banco `incident_hub`.
+
+**Pendências identificadas:**
+- Nenhuma. Causa raiz do warning do `artisan test` em Alpine não foi investigada a fundo por não bloquear nenhum critério de aceite do Challenge Pack.
+
+**Nenhuma sugestão foi rejeitada nesta etapa.**

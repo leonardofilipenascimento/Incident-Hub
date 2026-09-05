@@ -26,6 +26,8 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
+      // Evita a pagina de aviso do ngrok free tier quando a API estiver exposta via tunel.
+      "ngrok-skip-browser-warning": "true",
       ...options.headers,
     },
   });

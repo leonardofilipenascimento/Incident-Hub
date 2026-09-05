@@ -258,3 +258,26 @@ Diagnosticado com um teste descartável que imprimia `config()`, `$_ENV`, `$_SER
 **Validação:** banco `incident_hub` seedado com os 3 incidentes exigidos; suíte completa rodada (`docker compose exec backend ./vendor/bin/phpunit`, 23/23 GREEN); banco `incident_hub` conferido **imediatamente depois** — os 3 incidentes continuavam lá. Confirmado também que `incident_hub_test` tem o schema correto (sem a tabela `incident_affected_systems`, já removida) e 0 linhas após a suíte (esperado, pois `RefreshDatabase` roda cada teste em uma transação revertida). Repetido local (fora do Docker) para garantir que a correção não quebrou esse caminho: 23/23 GREEN.
 
 **Decisão:** Correção crítica para a entrega — sem ela, um avaliador que seguisse o `README.md` (`docker compose exec backend ./vendor/bin/phpunit`) apagaria os dados de demonstração exigidos pela Seção 11 do Challenge Pack sem perceber. Imagem Docker reconstruída com a correção definitiva.
+
+---
+
+## [12] Deploy de demonstração (Vercel + Railway) e documentação OpenAPI/Swagger
+
+**Objetivo:** Publicar uma demonstração pública da aplicação (não exigida pelo Challenge Pack, decisão do desenvolvedor) e adicionar documentação interativa da API em formato OpenAPI/Swagger.
+
+**Contexto:** Desenvolvedor pediu ajuda para publicar o frontend no Vercel. Vercel não roda o backend Laravel/MySQL (é serverless) — só o frontend foi publicado lá.
+
+**Instrução:** Deploy guiado passo a passo pela interface do Vercel e do Railway (contas do próprio desenvolvedor); depois, pedido para atualizar `README.md` com os links e criar documentação Swagger na raiz do projeto.
+
+**Resultado:**
+- `backend/Dockerfile`/`docker-entrypoint.sh` ajustados para respeitar a variável `PORT` em runtime (`${PORT:-8000}`), necessário para hospedar em serviços como Railway que atribuem a porta dinamicamente — mantendo o fallback 8000 para uso local/Docker Compose.
+- Frontend publicado no Vercel (Root Directory `frontend`, preset Next.js).
+- Backend publicado no Railway (Root Directory `backend`, build via Dockerfile detectado automaticamente) com um MySQL gerenciado no mesmo projeto, variáveis `DB_*` referenciando o serviço MySQL via `${{MySQL.MYSQLHOST}}` etc.
+- Etapa intermediária com túnel `ngrok` (`localhost:8000` → URL pública) usada para validar a integração Vercel↔backend antes do Railway estar pronto; descontinuada após o Railway entrar no ar.
+- Adicionado header `ngrok-skip-browser-warning` em todas as chamadas do frontend (`frontend/src/lib/api.ts`) — necessário enquanto a API esteve atrás do túnel ngrok; inofensivo contra qualquer outro backend.
+- Criados `openapi.yaml` (contrato OpenAPI 3.0 dos 5 endpoints, espelhando `specs/spec-incidents.md`) e `docs/swagger.html` (Swagger UI standalone via CDN, sem dependências novas no projeto).
+- `README.md` atualizado com seção "Deploy" (links de produção) e seção "Documentação interativa da API (Swagger)".
+
+**Validação:** testado com Playwright contra a URL pública do Vercel (`incident-hub-indol.vercel.app`) consumindo a API pública do Railway — listagem, dashboard e criação de incidente funcionando, zero erros de console. `docs/swagger.html` testado servindo a raiz do projeto com `python3 -m http.server`, confirmando os 5 endpoints e todos os schemas renderizados corretamente pelo Swagger UI.
+
+**Decisão:** Manter o deploy como extra de demonstração, deixando claro no README que não é exigido pelo desafio (evita a impressão de escopo inflado, conforme Seção 22 do Challenge Pack). Confirmado com o desenvolvedor que, sem esse deploy, a aplicação já atendia 100% ao requisito de execução local.

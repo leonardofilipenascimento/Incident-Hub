@@ -1,0 +1,266 @@
+openapi: 3.0.3
+info:
+  title: Incident Hub API
+  description: >
+    API REST para registro e acompanhamento de incidentes operacionais de TI.
+    Contrato completo também disponível em `specs/spec-incidents.md`.
+  version: "1.0.0"
+servers:
+  - url: http://localhost:8000/api
+    description: Local (Docker / php artisan serve)
+  - url: https://incident-hub-production-ef21.up.railway.app/api
+    description: Produção (Railway)
+
+tags:
+  - name: Incidentes
+  - name: Dashboard
+
+paths:
+  /incidents:
+    post:
+      tags: [Incidentes]
+      summary: Cria um novo incidente
+      description: Status sempre nasce como "Open", independente do que for enviado.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateIncidentPayload"
+            example:
+              title: "Payment API instability"
+              description: "Payment API returning intermittent errors during checkout."
+              severity: "Critical"
+              owner: "Ana"
+      responses:
+        "201":
+          description: Incidente criado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Incident"
+        "422":
+          description: Erro de validação
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+
+    get:
+      tags: [Incidentes]
+      summary: Lista incidentes
+      description: Ordenados por data de criação decrescente. Filtros combináveis.
+      parameters:
+        - name: severity
+          in: query
+          schema:
+            $ref: "#/components/schemas/Severity"
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/Status"
+      responses:
+        "200":
+          description: Lista de incidentes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Incident"
+
+  /incidents/{id}:
+    get:
+      tags: [Incidentes]
+      summary: Detalha um incidente, incluindo seu histórico
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Incidente encontrado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Incident"
+                  - type: object
+                    properties:
+                      history:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/IncidentStatusHistory"
+        "404":
+          description: Incidente não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+
+  /incidents/{id}/status:
+    patch:
+      tags: [Incidentes]
+      summary: Transiciona o status de um incidente
+      description: >
+        Regra de negócio: um incidente Critical não pode ir de Open direto para
+        Resolved — precisa passar por In Progress antes.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  $ref: "#/components/schemas/Status"
+            example:
+              status: "In Progress"
+      responses:
+        "200":
+          description: Status atualizado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Incident"
+                  - type: object
+                    properties:
+                      history:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/IncidentStatusHistory"
+        "404":
+          description: Incidente não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "422":
+          description: >
+            Valor de status inválido, ou violação da regra de negócio (ex.:
+            Critical tentando ir de Open direto para Resolved)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+
+  /dashboard:
+    get:
+      tags: [Dashboard]
+      summary: Visão resumida do estado atual dos incidentes
+      responses:
+        "200":
+          description: Contagens atuais
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+              example:
+                open_incidents: 1
+                unresolved_critical_incidents: 1
+                resolved_incidents: 1
+
+components:
+  schemas:
+    Severity:
+      type: string
+      enum: [Low, Medium, High, Critical]
+
+    Status:
+      type: string
+      enum: [Open, "In Progress", Resolved]
+
+    CreateIncidentPayload:
+      type: object
+      required: [title, description, severity, owner]
+      properties:
+        title:
+          type: string
+          minLength: 5
+          maxLength: 150
+        description:
+          type: string
+          minLength: 10
+        severity:
+          $ref: "#/components/schemas/Severity"
+        owner:
+          type: string
+
+    Incident:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        severity:
+          $ref: "#/components/schemas/Severity"
+        owner:
+          type: string
+        status:
+          $ref: "#/components/schemas/Status"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    IncidentStatusHistory:
+      type: object
+      properties:
+        id:
+          type: integer
+        incident_id:
+          type: integer
+        previous_status:
+          $ref: "#/components/schemas/Status"
+        new_status:
+          $ref: "#/components/schemas/Status"
+        created_at:
+          type: string
+          format: date-time
+
+    DashboardSummary:
+      type: object
+      properties:
+        open_incidents:
+          type: integer
+        unresolved_critical_incidents:
+          type: integer
+        resolved_incidents:
+          type: integer
+
+    ValidationError:
+      type: object
+      properties:
+        message:
+          type: string
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+
+    NotFoundError:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Incidente nao encontrado."

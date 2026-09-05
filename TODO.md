@@ -5,21 +5,22 @@ Derivado de `specs/spec-incidents.md`. Nenhum item de implementação deve ser i
 ## Backend — Feature: Gestão de Incidentes (conforme specs/spec-incidents.md)
 
 - [x] Definir SPEC e Contratos de API de incidentes (`specs/spec-incidents.md`)
-- [ ] Validar SPEC com o desenvolvedor
-- [ ] Criar Migration `incidents` conforme Schema da SPEC (seção 2)
-- [ ] Criar Migration `incident_status_histories` conforme Schema da SPEC (seção 3)
-- [ ] Criar Migration `incident_affected_systems` (relação 1:N para `affected_systems`)
-- [ ] Criar Models `Incident` e `IncidentStatusHistory` (Eloquent)
-- [ ] Criar Testes de Contrato para `POST /incidents` (201 + payload)
-- [ ] Criar Testes de Contrato para `GET /incidents` (200 + filtros + ordenação)
-- [ ] Criar Testes de Contrato para `GET /incidents/{id}` (200 e 404)
-- [ ] Criar Testes de Regra de Negócio — Regra 1 (Open → In Progress livre)
-- [ ] Criar Testes de Regra de Negócio — Regra 2 (trava Critical Open → Resolved)
-- [ ] Criar Testes de Regra de Negócio — Regra 3 (Closed exige Resolved antes)
-- [ ] Criar Testes de Regra de Negócio — Regra 4 (Closed é imutável)
-- [ ] Criar Testes de Regra de Negócio — Regra 5 (comentário obrigatório em Resolved)
-- [ ] Criar Testes de Regra de Negócio — Regra 6 (comentário obrigatório em Closed)
-- [ ] Criar Testes de Regra de Negócio — Regra 7 (registro automático de histórico)
+- [x] Validar SPEC com o desenvolvedor
+- [x] Criar Migration `incidents` conforme Schema da SPEC (seção 2)
+- [x] Criar Migration `incident_status_histories` conforme Schema da SPEC (seção 3)
+- [x] Criar Migration `incident_affected_systems` (relação 1:N para `affected_systems`)
+- [x] Criar Models `Incident`, `IncidentAffectedSystem` e `IncidentStatusHistory` (Eloquent) + Enums `IncidentStatus`/`IncidentSeverity`
+- [x] Criar Testes de Contrato para `POST /incidents` (201 + payload)
+- [x] Criar Testes de Contrato para `GET /incidents` (200 + filtros + ordenação)
+- [x] Criar Testes de Contrato para `GET /incidents/{id}` (200 e 404)
+- [x] Criar Testes de Regra de Negócio — Regra 1 (Open → In Progress livre)
+- [x] Criar Testes de Regra de Negócio — Regra 2 (trava Critical Open → Resolved)
+- [x] Criar Testes de Regra de Negócio — Regra 3 (Closed exige Resolved antes)
+- [x] Criar Testes de Regra de Negócio — Regra 4 (Closed é imutável, status e severidade)
+- [x] Criar Testes de Regra de Negócio — Regra 5 (comentário obrigatório em Resolved)
+- [x] Criar Testes de Regra de Negócio — Regra 6 (comentário obrigatório em Closed)
+- [x] Criar Testes de Regra de Negócio — Regra 7 (registro automático de histórico, status e severidade)
+- [x] Confirmar suíte em estado RED (24 testes falhando por ausência de rotas/controllers, antes da implementação)
 - [ ] Criar Request `CreateIncidentRequest` com validações da seção 4 da SPEC
 - [ ] Criar Request `UpdateIncidentStatusRequest` com validações da seção 7 da SPEC
 - [ ] Criar Request `UpdateIncidentSeverityRequest` com validações da seção 8 da SPEC

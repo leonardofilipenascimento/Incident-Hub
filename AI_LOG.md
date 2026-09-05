@@ -169,3 +169,22 @@ Desenvolvedor perguntou se deveria existir um método DELETE para remover incide
 **Decisão do desenvolvedor:** não adicionar. Escopo permanece fiel ao `CHALLENGE_PACK.md`; nenhuma alteração em `specs/spec-incidents.md`, `PLAN.md` ou código.
 
 **Sugestão rejeitada nesta etapa:** endpoint `DELETE /incidents/{id}` (hard ou soft delete).
+
+---
+
+## [08] Auditoria manual pós-teste do desenvolvedor — vazamento de stack trace corrigido
+
+**Data:** 2026-09-05
+
+**Contexto:**
+Desenvolvedor testou manualmente todos os endpoints via Postman e pediu para eu também testar, em busca de algo que tivesse passado despercebido. Rodei a suíte automatizada (26/26 OK) e depois uma bateria de 16 casos-limite manuais: 404 em PATCH de status/severidade para id inexistente, valores fora do enum, campos ausentes, `title` só com espaços (trim), item vazio em `affected_systems`, tipo errado em `severity`, campo desconhecido no payload (mass assignment), id não numérico na URL, métodos HTTP não suportados (`DELETE`, `PUT`), busca case-insensitive, filtros combinados sem resultado, e persistência do `comment` no histórico de severidade.
+
+**Achado real (falha de segurança, não de regra de negócio):** com `APP_DEBUG=true` no `docker-compose.yml`, qualquer exceção não tratada explicitamente (ex.: `405 Method Not Allowed` ao chamar `DELETE`/`PUT` em rotas que não suportam o método) retornava o corpo padrão de debug do Laravel: stack trace completo, caminhos absolutos de arquivos do servidor (`/app/vendor/...`) e nomes de classes internas. Isso é exposição de informação sensível (OWASP A05:2021 — Security Misconfiguration), mesmo não fazendo parte dos cenários de erro documentados na SPEC (que cobre apenas 201/200/422/404).
+
+**Correção:** `docker-compose.yml` alterado para `APP_DEBUG: "false"` no serviço `backend`, tornando o ambiente containerizado equivalente a produção nesse aspecto. Erros não tratados agora retornam apenas `{"message": "..."}` sem trace. Logs completos continuam disponíveis via `docker compose logs backend` para depuração. Mantido `APP_DEBUG=true` no `backend/.env` local (fora do Docker), por não ser um ambiente exposto publicamente e ser útil durante desenvolvimento.
+
+**Demais casos testados:** todos os 15 restantes se comportaram conforme a SPEC — nenhum outro desvio encontrado. Suíte automatizada (26/26) revalidada após a correção, banco resetado para o estado seedado limpo.
+
+**Pendências identificadas:** nenhuma.
+
+**Nenhuma sugestão foi rejeitada nesta etapa** (achado corrigido, não uma sugestão em aberto).

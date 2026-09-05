@@ -153,3 +153,19 @@ Ao validar "está tudo certo na API?", tentei rodar a suíte de testes dentro do
 - Nenhuma. Causa raiz do warning do `artisan test` em Alpine não foi investigada a fundo por não bloquear nenhum critério de aceite do Challenge Pack.
 
 **Nenhuma sugestão foi rejeitada nesta etapa.**
+
+---
+
+## [07] Sugestão avaliada e rejeitada: endpoint DELETE de incidente
+
+**Data:** 2026-09-05
+
+**Contexto:**
+Desenvolvedor perguntou se deveria existir um método DELETE para remover incidente por id.
+
+**Análise:**
+`CHALLENGE_PACK.md` (RF01–RF04, RT01–RT04, Critérios de Aceite) não menciona exclusão de incidentes. Além disso, o domínio é de histórico/auditoria (RF03 exige registro imutável de mudanças), e apagar um incidente conflitaria com esse objetivo — sistemas de auditoria tipicamente não removem registros, apenas os encerram (`status=Closed`). Apresentadas três opções ao desenvolvedor: não adicionar, adicionar DELETE simples (hard delete) ou soft delete.
+
+**Decisão do desenvolvedor:** não adicionar. Escopo permanece fiel ao `CHALLENGE_PACK.md`; nenhuma alteração em `specs/spec-incidents.md`, `PLAN.md` ou código.
+
+**Sugestão rejeitada nesta etapa:** endpoint `DELETE /incidents/{id}` (hard ou soft delete).

@@ -239,7 +239,6 @@ Os status oficiais do domínio são:
 Open
 In Progress
 Resolved
-Closed
 ```
 
 No código, mantenha uma representação consistente.
@@ -250,7 +249,6 @@ Quando utilizar enum em PHP, prefira (PascalCase nos nomes dos cases, conforme `
 IncidentStatus::Open
 IncidentStatus::InProgress
 IncidentStatus::Resolved
-IncidentStatus::Closed
 ```
 
 Evite espalhar strings literais pelo código:

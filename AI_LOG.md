@@ -212,3 +212,29 @@ Passo IMPLEMENT do frontend, cobrindo os 6 itens de `TODO.md`: listagem com filt
 - Nenhuma pendência de escopo. Frontend cobre os 6 itens do TODO. Possível melhoria futura não solicitada: UI dedicada para múltiplos `affected_systems` em vez de texto separado por vírgula — não implementada por não ser exigida e por manter a simplicidade.
 
 **Nenhuma sugestão foi rejeitada nesta etapa.**
+
+---
+
+## [10] Realinhamento crítico de escopo — CHALLENGE_PACK.md estava incorreto
+
+**Objetivo:** Verificar aderência do projeto ao Challenge Pack oficial e corrigir qualquer divergência.
+
+**Contexto:** O desenvolvedor colou no chat o texto completo e oficial do Challenge Pack (com seções numeradas 1-26, horários de início/checkpoint/code freeze/entrega, e as 15 perguntas obrigatórias do `FINAL_REPORT.md`). Esse documento **diverge significativamente** do `CHALLENGE_PACK.md` que já estava no repositório e vinha sendo usado como fonte de verdade desde o início do projeto.
+
+**Instrução:** "Esses são os requisitos que me passaram... verifique se tudo está atendido" e, em seguida, "Pode corrigir tudo".
+
+**Resultado — divergências encontradas:**
+- Campo obrigatório **`owner` (responsável)** não existia em nenhuma camada (schema, API, UI). Real e obrigatório desde a criação até a listagem e o detalhe.
+- **Dashboard** (contagem de `Open`, `Critical` não resolvidos, `Resolved`) não existia — requisito explícito e completo, nunca implementado.
+- **Dados de seed** completamente diferentes dos 3 incidentes exigidos (Payment API instability/Critical/Ana/Open; Reconciliation delay/High/Bruno/In Progress; Incorrect customer notification/Medium/Carla/Resolved).
+- Status real tem **apenas 3 valores** (`Open`/`In Progress`/`Resolved`) — o `Closed` implementado não existe no documento oficial.
+- Campo `affected_systems`, endpoint `PATCH /severity` e regra de comentário obrigatório ao resolver/fechar — **nenhum desses existe** no documento oficial; foram construídos em cima do `CHALLENGE_PACK.md` incorreto.
+- `FINAL_REPORT.md`, `PLAN.md` e `README.md` não seguiam a estrutura/seções exatamente exigidas pelo documento oficial.
+
+Correção aplicada: `CHALLENGE_PACK.md` substituído pelo texto oficial; `specs/spec-incidents.md` reescrita; migrations/models/enums/`IncidentService`/Requests/Resources/Controllers/rotas/seeder do backend reescritos (adicionado `owner` e `GET /dashboard`; removidos `affected_systems`, `PATCH /severity`, status `Closed`, regra de comentário obrigatório); suíte de testes de backend reescrita; frontend (`types`, `IncidentForm`, `IncidentList`, `IncidentDetails`, `IncidentTimeline`, novo `DashboardSummary`) atualizado na mesma direção; `PLAN.md`, `README.md` e `FINAL_REPORT.md` reescritos seguindo exatamente as seções/perguntas exigidas pelo documento oficial; `postman/Incident-Hub.postman_collection.json` atualizada.
+
+**Regressão encontrada durante a correção:** o serviço `backend` do `docker-compose.yml` não monta o código como volume — a imagem Docker é uma cópia estática do host feita em build time. Editar arquivos no host não reflete no container até um `docker compose up -d --build backend` explícito. Isso já havia acontecido antes no projeto (execução de testes contra código desatualizado) e se repetiu aqui: um `migrate:fresh` rodou contra a imagem antiga e recriou a tabela `incident_affected_systems`, que já havia sido removida do código-fonte. Identificado ao ver a migration antiga aparecer no output; corrigido rebuildando a imagem antes de cada validação subsequente.
+
+**Validação:** `docker compose up -d --build backend` + `migrate:fresh --seed --force` reconstruindo o schema do zero; `./vendor/bin/phpunit` → 23/23 GREEN; `curl /api/incidents` confirmando os 3 incidentes exatos exigidos; `curl /api/dashboard` confirmando as contagens corretas (1/1/1 com o seed); frontend reconstruído no Docker (`docker compose up -d --build frontend`) e validado com script Playwright — dashboard, listagem (título/severidade/responsável/status), detalhe, e a regra crítica bloqueando corretamente com a mensagem exata do documento oficial.
+
+**Decisão:** Manter o realinhamento completo — nenhuma funcionalidade fora do escopo oficial foi preservada, mesmo já estando implementada e testada, seguindo a Seção 22 do Challenge Pack ("funcionalidades extras não compensam requisitos obrigatórios que não funcionam"). Este episódio é registrado como o maior erro do projeto em `FINAL_REPORT.md` (pergunta 5).

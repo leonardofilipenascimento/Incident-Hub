@@ -1,111 +1,77 @@
 # PLAN.md
 
-## 1. Entendimento do problema
+## Entendimento
 
-O **Incident Hub** é uma plataforma web para registro, acompanhamento, categorização e gerenciamento do ciclo de vida de incidentes operacionais de TI, com histórico auditável e regras estritas de transição de estado (ver `CHALLENGE_PACK.md`).
+O **Incident Hub** resolve um problema de coordenação: hoje incidentes operacionais são comunicados por mensagens informais, o que dificulta saber quais estão abertos, quais são mais graves, quem é responsável, o que já foi feito e quais já foram resolvidos. A solução é uma aplicação web simples de registro e acompanhamento de incidentes, com um fluxo de status auditável (histórico) e uma visão resumida (dashboard) para dar visibilidade rápida ao estado atual das operações. É um problema de CRUD + máquina de estados simples, não de escala ou concorrência — o foco é confiabilidade e clareza, não sofisticação.
 
-## 2. Mapeamento Challenge Pack → Módulos/SPECs
+## Escopo
 
-| Requisito do Challenge Pack | Módulo | SPEC |
-| :--- | :--- | :--- |
-| RF01 — Gestão e Registro de Incidentes | Incidentes | `specs/spec-incidents.md` |
-| RF02 — Máquina de Estados e Transição de Status | Incidentes (regras de estado) | `specs/spec-incidents.md` |
-| RF03 — Histórico e Auditoria de Ações | Histórico de Incidentes (timeline) | `specs/spec-incidents.md` (seção de histórico) |
-| RF04 — Listagem e Filtros Operacionais | Incidentes (listagem) | `specs/spec-incidents.md` (endpoint de listagem) |
-| RT01 — Arquitetura Desacoplada | Infraestrutura/Arquitetura | (não gera SPEC de domínio — decisão técnica, seção 4 deste PLAN) |
-| RT02 — Banco de Dados Relacional (migrations + seeders) | Persistência | `specs/spec-incidents.md` (seção Schema) + seeders |
-| RT03/RT04 — Validações e Respostas de API | Incidentes (contratos) | `specs/spec-incidents.md` (seções Validações e Erros) |
-| Critério de Aceite 3 — Persistência após reinicialização de containers | Infraestrutura/Containerização | (não gera SPEC de domínio — decisão técnica, seção 4.1 deste PLAN) |
+### Obrigatório (Challenge Pack)
+- Cadastro de incidente: título, descrição, severidade, responsável (owner); status sempre nasce `Open`.
+- Listagem com filtro por status e por severidade.
+- Tela de detalhe com todos os campos do incidente.
+- Alteração de status, com a regra: incidente `Critical` não pode ir direto de `Open` para `Resolved` (precisa passar por `In Progress`), com feedback compreensível ao usuário em caso de transição inválida.
+- Histórico de alterações de status (status anterior, novo status, timestamp), persistido e associado ao incidente.
+- Dashboard com: quantidade de incidentes `Open`, quantidade de `Critical` não resolvidos, quantidade de `Resolved`.
+- Persistência real (sobrevive a refresh/restart).
+- Dados de exemplo pré-carregados (os 3 incidentes exigidos na Seção 11 do Challenge Pack).
+- Testes automatizados para a regra de negócio crítica (trava do `Critical`).
+- README com instruções de execução reproduzíveis.
 
-Todo o escopo funcional do Challenge Pack (RF01–RF04) está concentrado em um único módulo de domínio, **Incidentes**, incluindo seu histórico — não há necessidade de módulos adicionais (ex.: autenticação) pois o Challenge Pack não os exige. Evita-se assim overengineering (Seção 22 do prompt principal).
+### Desejável (se sobrar tempo)
+- Containerização (Docker) para facilitar reprodução e persistência entre reinícios.
+- Interface com filtros combináveis e feedback visual de erro claro (não só um alert genérico).
 
-## 3. Escopo obrigatório
+### Fora de escopo (deliberadamente não implementado)
+- Autenticação, permissões, recuperação de senha, múltiplos tenants (explicitamente dispensado pelo Challenge Pack, Seção 2).
+- Edição de campos do incidente após criado (título, descrição, severidade) — o Challenge Pack só pede alteração de status.
+- Exclusão de incidentes — não pedido; conflitaria com o objetivo de manter histórico auditável.
+- Paginação, busca textual, ordenação configurável — não exigidos; a listagem ordenada por data de criação decrescente já atende ao requisito.
 
-- Criação de incidentes com validação estrita dos campos (RF01).
-- Máquina de estados com as 4 regras de transição descritas em RF02.
-- Histórico imutável de mudanças de status/severidade (RF03).
-- Listagem com ordenação e filtros por severidade, status e busca textual (RF04).
-- Migrations + seeders com no mínimo 5 incidentes pré-carregados (RT02).
-- Testes automatizados cobrindo as regras de transição de status, especialmente a trava do `Critical` (Critério de Aceite 1).
+## Decisões técnicas
 
-## 4. Decisões técnicas e justificativa da stack
+### Stack
+- **Backend:** Laravel (PHP) — API REST simples, produtivo para CRUD + validação + migrations em pouco tempo.
+- **Frontend:** Next.js (React + TypeScript) — SPA leve, suficiente para as 3 telas exigidas (lista, detalhe/criação, dashboard).
+- **Banco:** MySQL — relacional, adequado para o modelo simples (incidente 1:N histórico) e para a exigência de persistência real.
 
-### Backend
-- **Laravel** — API REST, conforme stack obrigatória (Seção 5 do prompt principal) e RT01.
-- **Eloquent** — ORM para persistência dos models `Incident` e `IncidentHistory`.
-- **Laravel Migrations/Seeders** — atende RT02 (schema relacional + massa mínima de teste).
-- **PHPUnit** — testes de contrato e de regra de negócio (Critério de Aceite 1).
+### Persistência
+Duas tabelas: `incidents` (dados centrais) e `incident_status_histories` (uma linha por transição de status, imutável). Persistência real garantida via volume Docker nomeado (dados sobrevivem a restart de containers).
 
-### Frontend
-- **Next.js / React / TypeScript** — SPA/SSR consumindo a API REST, conforme RT01.
+### Estrutura geral
+Monorepo com `backend/` (Laravel) e `frontend/` (Next.js) desacoplados, comunicando via API REST, orquestrados por `docker-compose.yml` (MySQL + backend + frontend). Ver `README.md` para instruções de execução.
 
-### Banco
-- **MySQL** — relacional, conforme RT02.
+### Estratégia de testes
+Testes automatizados (PHPUnit) cobrindo os contratos de API e, com prioridade máxima, a regra de negócio crítica (`Critical` não pode pular direto para `Resolved`), conforme exigido pela Seção 12 do Challenge Pack.
 
-### Arquitetura
+## Decomposição
 
-```text
-Next.js / React
-      ↓ (HTTP / REST contratado na SPEC)
-Laravel
-      ↓
-Eloquent
-      ↓
-MySQL
-```
+1. Modelagem do domínio (migrations, model `Incident`, model `IncidentStatusHistory`).
+2. Endpoint de criação de incidente + validação.
+3. Endpoint de listagem com filtros por status/severidade.
+4. Endpoint de detalhe (incidente + histórico).
+5. Endpoint de transição de status + regra de negócio crítica + registro automático de histórico.
+6. Endpoint de dashboard (contagens).
+7. Seed com os 3 incidentes de exemplo exigidos.
+8. Testes automatizados das regras de negócio e contratos.
+9. Frontend: listagem + filtros, criação, detalhe + histórico, ação de transição de status, dashboard.
+10. Containerização (Docker) para persistência e reprodutibilidade.
+11. Documentação final (README, AI_LOG, FINAL_REPORT).
 
-### 4.1 Containerização (Docker)
+## Critérios de aceite
 
-O Challenge Pack menciona explicitamente, no Critério de Aceite 3, que "o sistema deve manter a consistência dos dados após a reinicialização dos containers/servidores" — decisão de containerizar via Docker/Docker Compose para atender esse critério de forma verificável, ainda que não estivesse detalhada como requisito técnico explícito (RT).
+- Cada requisito funcional (Seções 3-9 do Challenge Pack) tem um teste automatizado ou uma verificação manual documentada que comprova o comportamento esperado.
+- A regra do incidente `Critical` tem teste automatizado cobrindo tanto o caso bloqueado (`Open` → `Resolved`) quanto o caminho permitido (`Open` → `In Progress` → `Resolved`).
+- Os dados sobrevivem a um restart da aplicação/containers (validado manualmente).
+- Uma pessoa sem contexto prévio consegue rodar a aplicação do zero seguindo só o `README.md`.
+- O seed contém, no mínimo, os 3 incidentes exigidos com os dados exatos especificados.
 
-- Um `Dockerfile` por aplicação (`backend/Dockerfile`, `frontend/Dockerfile`), orquestrados por um único `docker-compose.yml` na raiz do repositório.
-- **backend**: `php:8.3-cli-alpine` + extensão `pdo_mysql`, Composer instalado com dependências completas (inclui `require-dev`, necessário para rodar PHPUnit dentro do container e evitar descompasso entre o manifest de pacotes cacheado e os pacotes instalados). Entrypoint roda `php artisan migrate --force` (idempotente) antes de subir o servidor embutido do Laravel (`artisan serve`).
-- **frontend**: build multi-stage com `node:22-alpine`, compilando com `npm run build` e servindo com `next start`.
-- **mysql**: imagem oficial `mysql:8.0`, com volume nomeado (`mysql_data`) garantindo persistência entre reinicializações — validado manualmente restartando os containers e confirmando que os dados seedados permanecem.
-- Seed **não** roda automaticamente no entrypoint (evita duplicar dados a cada restart); é executado manualmente uma vez via `docker compose exec backend php artisan db:seed`.
-- Porta do MySQL mapeada para `3307` no host (em vez de `3306`) para não colidir com uma instância local de MySQL já em uso na máquina de desenvolvimento; a comunicação interna entre os containers `backend`↔`mysql` continua na porta `3306` padrão, via rede Docker.
+## Riscos
 
-### Estrutura de pastas
+- **Tempo limitado** (code freeze às 17:40): mitigado priorizando rigorosamente os requisitos obrigatórios antes de qualquer extra, e revisando o Challenge Pack integralmente antes de aprofundar a implementação.
+- **Interpretação equivocada de um requisito**: mitigado tratando o Challenge Pack como fonte única de verdade e revalidando a implementação contra ele quando surgir dúvida ou nova informação (Seção 21 do Challenge Pack prevê mudanças/novas informações durante o hackathon).
+- **Escopo inflado por sugestões da IA**: a IA pode propor campos/endpoints "razoáveis" que não foram pedidos (ex.: campos extras, regras adicionais). Mitigado revisando toda sugestão contra o texto literal do Challenge Pack antes de aceitar.
 
-```text
-incident-hub/
-│
-├── backend/
-│   └── Laravel
-│
-├── frontend/
-│   └── Next.js
-│
-├── specs/
-│   └── spec-incidents.md
-│
-├── START.md
-├── PLAN.md
-├── TODO.md
-├── AI_LOG.md
-├── README.md
-└── FINAL_REPORT.md
-```
+## Estratégia de IA
 
-## 5. Estratégia de persistência
-
-- Tabela `incidents`: dados centrais do incidente (título, descrição, severidade, status, sistemas afetados, timestamps).
-- Tabela `incident_status_histories`: uma linha por alteração de status ou severidade, imutável (sem update/delete), referenciando `incident_id`.
-- Sistemas afetados (`affected_systems`) persistidos como relação 1:N (`incident_affected_systems`) para permitir busca/consulta estruturada, evitando serialização opaca em coluna única.
-- Seeder cria no mínimo 5 incidentes cobrindo as 4 severidades e pelo menos os status `Open`, `In Progress`, `Resolved`, `Closed`, para exercitar filtros e regras de transição manualmente.
-
-## 6. Estratégia de testes de contrato e integração
-
-- **Testes de contrato**: para cada endpoint de `specs/spec-incidents.md`, validar status HTTP, estrutura e tipos do payload de resposta (sucesso e erro).
-- **Testes de regra de negócio**: um teste por cenário Given-When-Then da SPEC, com foco obrigatório na trava de transição `Critical: Open → Resolved` (Critério de Aceite 1).
-- Testes escritos **antes** da implementação (Seção 4 — TEST FIRST), a partir da SPEC validada.
-
-## 7. Riscos e uso de IA
-
-- **Risco:** ambiguidade sobre quem pode alterar severidade e se isso é feito por endpoint dedicado ou embutido na criação/atualização — mitigado tratando como endpoint explícito e mínimo em `specs/spec-incidents.md`, sujeito a validação do desenvolvedor antes da implementação.
-- **Risco:** divergência entre nomenclatura de campos no banco/API — mitigado seguindo `padroes-nomenclatura.md` (snake_case uniforme em DB e JSON).
-- **Uso de IA:** Claude Code conduz o ciclo SDD (SPEC → testes → implementação); todas as decisões e desvios são registrados em `AI_LOG.md`.
-
-## 8. Decomposição de tarefas
-
-Ver `TODO.md`, derivado de `specs/spec-incidents.md`.
+A IA (Claude Code) é usada para acelerar a implementação dentro da metodologia Spec-Driven: gerar a spec técnica a partir do Challenge Pack, escrever migrations/models/controllers/testes seguindo essa spec, e validar o resultado (rodando testes e testando manualmente os endpoints/telas) antes de avançar. Toda decisão relevante — especialmente desvios, erros encontrados e sugestões da IA que extrapolaram o pedido — é registrada em `AI_LOG.md` para rastreabilidade.

@@ -1,0 +1,187 @@
+{
+	"info": {
+		"name": "Incident Hub",
+		"description": "Contratos de specs/spec-incidents.md. Variaveis baseUrl e incidentId ja vem na colecao (Edit > Variables) - ajuste incidentId conforme os ids seedados no seu banco.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{ "key": "baseUrl", "value": "http://localhost:8000/api" },
+		{ "key": "incidentId", "value": "1" }
+	],
+	"item": [
+		{
+			"name": "Incidentes",
+			"item": [
+				{
+					"name": "Criar incidente",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Falha no gateway de pagamento\",\n  \"description\": \"Gateway retornando 500 em 30% das transacoes\",\n  \"severity\": \"Critical\",\n  \"affected_systems\": [\"payment-gateway\", \"checkout-api\"]\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/incidents", "host": ["{{baseUrl}}"], "path": ["incidents"] }
+					}
+				},
+				{
+					"name": "Criar incidente - erro de validacao (title vazio)",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"\",\n  \"description\": \"curto\",\n  \"severity\": \"Low\",\n  \"affected_systems\": []\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/incidents", "host": ["{{baseUrl}}"], "path": ["incidents"] }
+					}
+				},
+				{
+					"name": "Listar incidentes",
+					"request": {
+						"method": "GET",
+						"url": { "raw": "{{baseUrl}}/incidents", "host": ["{{baseUrl}}"], "path": ["incidents"] }
+					}
+				},
+				{
+					"name": "Listar incidentes - filtro por severidade",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/incidents?severity=Critical",
+							"host": ["{{baseUrl}}"], "path": ["incidents"],
+							"query": [{ "key": "severity", "value": "Critical" }]
+						}
+					}
+				},
+				{
+					"name": "Listar incidentes - filtro por status",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/incidents?status=In Progress",
+							"host": ["{{baseUrl}}"], "path": ["incidents"],
+							"query": [{ "key": "status", "value": "In Progress" }]
+						}
+					}
+				},
+				{
+					"name": "Listar incidentes - busca textual",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/incidents?search=gateway",
+							"host": ["{{baseUrl}}"], "path": ["incidents"],
+							"query": [{ "key": "search", "value": "gateway" }]
+						}
+					}
+				},
+				{
+					"name": "Detalhar incidente (com historico)",
+					"request": {
+						"method": "GET",
+						"url": { "raw": "{{baseUrl}}/incidents/{{incidentId}}", "host": ["{{baseUrl}}"], "path": ["incidents", "{{incidentId}}"] }
+					}
+				},
+				{
+					"name": "Detalhar incidente - nao encontrado (404)",
+					"request": {
+						"method": "GET",
+						"url": { "raw": "{{baseUrl}}/incidents/999999", "host": ["{{baseUrl}}"], "path": ["incidents", "999999"] }
+					}
+				}
+			]
+		},
+		{
+			"name": "Transicao de status",
+			"item": [
+				{
+					"name": "Open -> In Progress (permitido)",
+					"request": {
+						"method": "PATCH",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": { "mode": "raw", "raw": "{\n  \"status\": \"In Progress\"\n}" },
+						"url": { "raw": "{{baseUrl}}/incidents/{{incidentId}}/status", "host": ["{{baseUrl}}"], "path": ["incidents", "{{incidentId}}", "status"] }
+					}
+				},
+				{
+					"name": "In Progress -> Resolved sem comment (422, Regra 5)",
+					"request": {
+						"method": "PATCH",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": { "mode": "raw", "raw": "{\n  \"status\": \"Resolved\"\n}" },
+						"url": { "raw": "{{baseUrl}}/incidents/{{incidentId}}/status", "host": ["{{baseUrl}}"], "path": ["incidents", "{{incidentId}}", "status"] }
+					}
+				},
+				{
+					"name": "In Progress -> Resolved com comment (permitido)",
+					"request": {
+						"method": "PATCH",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": { "mode": "raw", "raw": "{\n  \"status\": \"Resolved\",\n  \"comment\": \"Causa raiz corrigida e validada em producao\"\n}" },
+						"url": { "raw": "{{baseUrl}}/incidents/{{incidentId}}/status", "host": ["{{baseUrl}}"], "path": ["incidents", "{{incidentId}}", "status"] }
+					}
+				},
+				{
+					"name": "Critical Open -> Resolved direto (422, Regra 2)",
+					"request": {
+						"method": "PATCH",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": { "mode": "raw", "raw": "{\n  \"status\": \"Resolved\",\n  \"comment\": \"tentando pular etapa\"\n}" },
+						"url": { "raw": "{{baseUrl}}/incidents/{{incidentId}}/status", "host": ["{{baseUrl}}"], "path": ["incidents", "{{incidentId}}", "status"] }
+					}
+				},
+				{
+					"name": "Closed sem passar por Resolved (422, Regra 3)",
+					"request": {
+						"method": "PATCH",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": { "mode": "raw", "raw": "{\n  \"status\": \"Closed\",\n  \"comment\": \"fechando direto\"\n}" },
+						"url": { "raw": "{{baseUrl}}/incidents/{{incidentId}}/status", "host": ["{{baseUrl}}"], "path": ["incidents", "{{incidentId}}", "status"] }
+					}
+				},
+				{
+					"name": "Resolved -> Closed com comment (permitido)",
+					"request": {
+						"method": "PATCH",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": { "mode": "raw", "raw": "{\n  \"status\": \"Closed\",\n  \"comment\": \"Incidente encerrado apos monitoramento\"\n}" },
+						"url": { "raw": "{{baseUrl}}/incidents/{{incidentId}}/status", "host": ["{{baseUrl}}"], "path": ["incidents", "{{incidentId}}", "status"] }
+					}
+				},
+				{
+					"name": "Closed nao pode mudar status (422, Regra 4)",
+					"request": {
+						"method": "PATCH",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": { "mode": "raw", "raw": "{\n  \"status\": \"In Progress\"\n}" },
+						"url": { "raw": "{{baseUrl}}/incidents/{{incidentId}}/status", "host": ["{{baseUrl}}"], "path": ["incidents", "{{incidentId}}", "status"] }
+					}
+				}
+			]
+		},
+		{
+			"name": "Alteracao de severidade",
+			"item": [
+				{
+					"name": "Atualizar severidade (permitido)",
+					"request": {
+						"method": "PATCH",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": { "mode": "raw", "raw": "{\n  \"severity\": \"High\"\n}" },
+						"url": { "raw": "{{baseUrl}}/incidents/{{incidentId}}/severity", "host": ["{{baseUrl}}"], "path": ["incidents", "{{incidentId}}", "severity"] }
+					}
+				},
+				{
+					"name": "Alterar severidade de incidente Closed (422, Regra 4)",
+					"request": {
+						"method": "PATCH",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": { "mode": "raw", "raw": "{\n  \"severity\": \"Low\"\n}" },
+						"url": { "raw": "{{baseUrl}}/incidents/{{incidentId}}/severity", "host": ["{{baseUrl}}"], "path": ["incidents", "{{incidentId}}", "severity"] }
+					}
+				}
+			]
+		}
+	]
+}

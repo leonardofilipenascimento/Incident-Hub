@@ -14,7 +14,7 @@ class IncidentDetailTest extends TestCase
     #[Test]
     public function it_shows_an_incident_with_its_history(): void
     {
-        $incident = Incident::factory()->create();
+        $incident = Incident::factory()->create(['owner' => 'Ana']);
         $incident->history()->create([
             'previous_status' => 'Open',
             'new_status' => 'In Progress',
@@ -24,6 +24,7 @@ class IncidentDetailTest extends TestCase
 
         $response->assertOk();
         $response->assertJsonPath('id', $incident->id);
+        $response->assertJsonPath('owner', 'Ana');
         $response->assertJsonCount(1, 'history');
         $response->assertJsonPath('history.0.new_status', 'In Progress');
     }

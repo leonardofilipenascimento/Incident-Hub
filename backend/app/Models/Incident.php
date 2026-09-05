@@ -16,6 +16,7 @@ class Incident extends Model
         'title',
         'description',
         'severity',
+        'owner',
         'status',
     ];
 
@@ -24,18 +25,8 @@ class Incident extends Model
         'status' => IncidentStatus::class,
     ];
 
-    public function affectedSystems(): HasMany
-    {
-        return $this->hasMany(IncidentAffectedSystem::class);
-    }
-
     public function history(): HasMany
     {
         return $this->hasMany(IncidentStatusHistory::class)->oldest('created_at');
-    }
-
-    public function isClosed(): bool
-    {
-        return $this->status === IncidentStatus::Closed;
     }
 }

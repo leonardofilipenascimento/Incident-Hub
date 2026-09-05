@@ -17,14 +17,6 @@ class UpdateIncidentStatusRequest extends FormRequest
     {
         return [
             'status' => ['required', Rule::in(array_column(IncidentStatus::cases(), 'value'))],
-            'comment' => [
-                Rule::requiredIf(in_array($this->input('status'), [
-                    IncidentStatus::Resolved->value,
-                    IncidentStatus::Closed->value,
-                ], true)),
-                'nullable',
-                'string',
-            ],
         ];
     }
 
@@ -33,7 +25,6 @@ class UpdateIncidentStatusRequest extends FormRequest
         return [
             'status.required' => 'O campo status e obrigatorio.',
             'status.in' => 'O campo status deve ser um dos valores permitidos.',
-            'comment.required' => "Comentario e obrigatorio ao transicionar para {$this->input('status')}.",
         ];
     }
 }

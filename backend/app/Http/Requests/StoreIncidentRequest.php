@@ -19,8 +19,7 @@ class StoreIncidentRequest extends FormRequest
             'title' => ['required', 'string', 'min:5', 'max:150'],
             'description' => ['required', 'string', 'min:10'],
             'severity' => ['required', Rule::in(array_column(IncidentSeverity::cases(), 'value'))],
-            'affected_systems' => ['required', 'array', 'min:1'],
-            'affected_systems.*' => ['required', 'string'],
+            'owner' => ['required', 'string', 'max:150'],
         ];
     }
 
@@ -34,10 +33,7 @@ class StoreIncidentRequest extends FormRequest
             'description.min' => 'O campo description deve ter no minimo 10 caracteres.',
             'severity.required' => 'O campo severity e obrigatorio.',
             'severity.in' => 'O campo severity deve ser um dos valores permitidos.',
-            'affected_systems.required' => 'Informe ao menos um sistema afetado.',
-            'affected_systems.min' => 'Informe ao menos um sistema afetado.',
-            'affected_systems.*.required' => 'Cada sistema afetado deve possuir um nome.',
-            'affected_systems.*.string' => 'Cada sistema afetado deve ser um texto valido.',
+            'owner.required' => 'O campo owner e obrigatorio.',
         ];
     }
 }

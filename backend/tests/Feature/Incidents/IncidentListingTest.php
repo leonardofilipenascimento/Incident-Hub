@@ -29,6 +29,17 @@ class IncidentListingTest extends TestCase
     }
 
     #[Test]
+    public function it_lists_the_owner_of_each_incident(): void
+    {
+        Incident::factory()->create(['owner' => 'Ana']);
+
+        $response = $this->getJson('/api/incidents');
+
+        $response->assertOk();
+        $response->assertJsonPath('data.0.owner', 'Ana');
+    }
+
+    #[Test]
     public function it_filters_incidents_by_severity(): void
     {
         Incident::factory()->withSeverity(IncidentSeverity::Critical)->create();
@@ -52,18 +63,5 @@ class IncidentListingTest extends TestCase
         $response->assertOk();
         $response->assertJsonCount(1, 'data');
         $response->assertJsonPath('data.0.status', 'In Progress');
-    }
-
-    #[Test]
-    public function it_filters_incidents_by_search_term_in_title_or_description(): void
-    {
-        Incident::factory()->create(['title' => 'Falha no gateway de pagamento']);
-        Incident::factory()->create(['title' => 'Lentidao no checkout', 'description' => 'Gateway de pagamento lento']);
-        Incident::factory()->create(['title' => 'Erro de autenticacao', 'description' => 'Nada relacionado']);
-
-        $response = $this->getJson('/api/incidents?search=gateway');
-
-        $response->assertOk();
-        $response->assertJsonCount(2, 'data');
     }
 }

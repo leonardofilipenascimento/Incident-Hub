@@ -14,11 +14,8 @@ return new class extends Migration
         Schema::create('incident_status_histories', function (Blueprint $table) {
             $table->id();
             $table->foreignId('incident_id')->constrained()->cascadeOnDelete();
-            $table->string('previous_status')->nullable();
-            $table->string('new_status')->nullable();
-            $table->string('previous_severity')->nullable();
-            $table->string('new_severity')->nullable();
-            $table->text('comment')->nullable();
+            $table->string('previous_status');
+            $table->string('new_status');
             $table->timestamp('created_at')->useCurrent();
         });
     }

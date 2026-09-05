@@ -23,17 +23,9 @@ class IncidentFactory extends Factory
             'title' => $this->faker->sentence(4),
             'description' => $this->faker->paragraph(),
             'severity' => IncidentSeverity::Medium,
+            'owner' => $this->faker->firstName(),
             'status' => IncidentStatus::Open,
         ];
-    }
-
-    public function configure(): static
-    {
-        return $this->afterCreating(function (Incident $incident) {
-            if ($incident->affectedSystems()->count() === 0) {
-                $incident->affectedSystems()->create(['name' => 'api-gateway']);
-            }
-        });
     }
 
     public function withSeverity(IncidentSeverity $severity): static

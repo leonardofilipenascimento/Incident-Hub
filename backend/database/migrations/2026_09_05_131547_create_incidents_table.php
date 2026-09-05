@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('title', 150);
             $table->text('description');
             $table->string('severity');
+            $table->string('owner');
             $table->string('status');
             $table->timestamps();
         });

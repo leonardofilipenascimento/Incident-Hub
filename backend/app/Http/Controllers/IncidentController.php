@@ -2,10 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\IncidentSeverity;
 use App\Enums\IncidentStatus;
 use App\Http\Requests\StoreIncidentRequest;
-use App\Http\Requests\UpdateIncidentSeverityRequest;
 use App\Http\Requests\UpdateIncidentStatusRequest;
 use App\Http\Resources\IncidentResource;
 use App\Models\Incident;
@@ -27,7 +25,7 @@ class IncidentController extends Controller
     public function index(Request $request): JsonResponse
     {
         $incidents = $this->incidentService->listIncidents(
-            $request->only(['severity', 'status', 'search'])
+            $request->only(['severity', 'status'])
         );
 
         return response()->json([
@@ -37,7 +35,7 @@ class IncidentController extends Controller
 
     public function show(Incident $incident): JsonResponse
     {
-        $incident->load(['affectedSystems', 'history']);
+        $incident->load('history');
 
         return IncidentResource::make($incident)->response();
     }
@@ -46,19 +44,7 @@ class IncidentController extends Controller
     {
         $updated = $this->incidentService->updateIncidentStatus(
             $incident,
-            IncidentStatus::from($request->validated('status')),
-            $request->validated('comment')
-        );
-
-        return IncidentResource::make($updated)->response();
-    }
-
-    public function updateSeverity(UpdateIncidentSeverityRequest $request, Incident $incident): JsonResponse
-    {
-        $updated = $this->incidentService->updateIncidentSeverity(
-            $incident,
-            IncidentSeverity::from($request->validated('severity')),
-            $request->validated('comment')
+            IncidentStatus::from($request->validated('status'))
         );
 
         return IncidentResource::make($updated)->response();

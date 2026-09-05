@@ -13,10 +13,10 @@ class IncidentCreationTest extends TestCase
     private function validPayload(array $overrides = []): array
     {
         return array_merge([
-            'title' => 'Falha no gateway de pagamento',
-            'description' => 'Gateway retornando 500 em 30% das transacoes',
+            'title' => 'Payment API instability',
+            'description' => 'Payment API returning intermittent errors during checkout.',
             'severity' => 'Critical',
-            'affected_systems' => ['payment-gateway', 'checkout-api'],
+            'owner' => 'Ana',
         ], $overrides);
     }
 
@@ -27,16 +27,17 @@ class IncidentCreationTest extends TestCase
 
         $response->assertCreated();
         $response->assertJson([
-            'title' => 'Falha no gateway de pagamento',
-            'description' => 'Gateway retornando 500 em 30% das transacoes',
+            'title' => 'Payment API instability',
+            'description' => 'Payment API returning intermittent errors during checkout.',
             'severity' => 'Critical',
+            'owner' => 'Ana',
             'status' => 'Open',
-            'affected_systems' => ['payment-gateway', 'checkout-api'],
         ]);
         $response->assertJsonStructure(['id', 'created_at', 'updated_at']);
 
         $this->assertDatabaseHas('incidents', [
-            'title' => 'Falha no gateway de pagamento',
+            'title' => 'Payment API instability',
+            'owner' => 'Ana',
             'status' => 'Open',
         ]);
     }
@@ -44,7 +45,7 @@ class IncidentCreationTest extends TestCase
     #[Test]
     public function it_ignores_client_provided_status_and_forces_open(): void
     {
-        $response = $this->postJson('/api/incidents', $this->validPayload(['status' => 'Closed']));
+        $response = $this->postJson('/api/incidents', $this->validPayload(['status' => 'Resolved']));
 
         $response->assertCreated();
         $response->assertJsonPath('status', 'Open');
@@ -87,11 +88,11 @@ class IncidentCreationTest extends TestCase
     }
 
     #[Test]
-    public function it_requires_at_least_one_affected_system(): void
+    public function it_requires_owner_when_creating_an_incident(): void
     {
-        $response = $this->postJson('/api/incidents', $this->validPayload(['affected_systems' => []]));
+        $response = $this->postJson('/api/incidents', $this->validPayload(['owner' => '']));
 
         $response->assertUnprocessable();
-        $response->assertJsonValidationErrors(['affected_systems']);
+        $response->assertJsonValidationErrors(['owner']);
     }
 }

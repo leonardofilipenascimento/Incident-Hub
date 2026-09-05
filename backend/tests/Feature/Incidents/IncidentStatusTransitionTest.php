@@ -27,6 +27,19 @@ class IncidentStatusTransitionTest extends TestCase
     }
 
     #[Test]
+    public function it_allows_in_progress_to_resolved_transition(): void
+    {
+        $incident = Incident::factory()->withStatus(IncidentStatus::InProgress)->create();
+
+        $response = $this->patchJson("/api/incidents/{$incident->id}/status", [
+            'status' => 'Resolved',
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('status', 'Resolved');
+    }
+
+    #[Test]
     public function critical_incident_cannot_move_directly_from_open_to_resolved(): void
     {
         $incident = Incident::factory()
@@ -36,74 +49,46 @@ class IncidentStatusTransitionTest extends TestCase
 
         $response = $this->patchJson("/api/incidents/{$incident->id}/status", [
             'status' => 'Resolved',
-            'comment' => 'Mitigado diretamente',
         ]);
 
         $response->assertUnprocessable();
         $response->assertJsonFragment([
-            'status' => ['Incidentes criticos devem passar por In Progress antes de serem resolvidos.'],
+            'status' => ['Um incidente Critical nao pode passar diretamente de Open para Resolved. E necessario passar por In Progress.'],
+        ]);
+
+        $this->assertDatabaseHas('incidents', [
+            'id' => $incident->id,
+            'status' => 'Open',
         ]);
     }
 
     #[Test]
-    public function incident_cannot_be_closed_without_passing_through_resolved(): void
+    public function critical_incident_can_be_resolved_after_passing_through_in_progress(): void
     {
-        $incident = Incident::factory()->withStatus(IncidentStatus::InProgress)->create();
-
-        $response = $this->patchJson("/api/incidents/{$incident->id}/status", [
-            'status' => 'Closed',
-            'comment' => 'Fechando direto',
-        ]);
-
-        $response->assertUnprocessable();
-        $response->assertJsonFragment([
-            'status' => ['Incidentes so podem ser fechados a partir do status Resolved.'],
-        ]);
-    }
-
-    #[Test]
-    public function closed_incident_cannot_have_its_status_changed(): void
-    {
-        $incident = Incident::factory()->withStatus(IncidentStatus::Closed)->create();
-
-        $response = $this->patchJson("/api/incidents/{$incident->id}/status", [
-            'status' => 'In Progress',
-        ]);
-
-        $response->assertUnprocessable();
-        $response->assertJsonFragment([
-            'status' => ['Incidentes fechados nao podem sofrer alteracoes.'],
-        ]);
-    }
-
-    #[Test]
-    public function it_requires_comment_when_resolving_an_incident(): void
-    {
-        $incident = Incident::factory()->withStatus(IncidentStatus::InProgress)->create();
+        $incident = Incident::factory()
+            ->withSeverity(IncidentSeverity::Critical)
+            ->withStatus(IncidentStatus::InProgress)
+            ->create();
 
         $response = $this->patchJson("/api/incidents/{$incident->id}/status", [
             'status' => 'Resolved',
         ]);
 
-        $response->assertUnprocessable();
-        $response->assertJsonFragment([
-            'comment' => ['Comentario e obrigatorio ao transicionar para Resolved.'],
-        ]);
+        $response->assertOk();
+        $response->assertJsonPath('status', 'Resolved');
     }
 
     #[Test]
-    public function it_requires_comment_when_closing_an_incident(): void
+    public function it_rejects_an_unknown_status_value(): void
     {
-        $incident = Incident::factory()->withStatus(IncidentStatus::Resolved)->create();
+        $incident = Incident::factory()->withStatus(IncidentStatus::Open)->create();
 
         $response = $this->patchJson("/api/incidents/{$incident->id}/status", [
             'status' => 'Closed',
         ]);
 
         $response->assertUnprocessable();
-        $response->assertJsonFragment([
-            'comment' => ['Comentario e obrigatorio ao transicionar para Closed.'],
-        ]);
+        $response->assertJsonValidationErrors(['status']);
     }
 
     #[Test]
@@ -113,14 +98,22 @@ class IncidentStatusTransitionTest extends TestCase
 
         $this->patchJson("/api/incidents/{$incident->id}/status", [
             'status' => 'Resolved',
-            'comment' => 'Causa raiz corrigida e validada em producao',
         ])->assertOk();
 
         $this->assertDatabaseHas('incident_status_histories', [
             'incident_id' => $incident->id,
             'previous_status' => 'In Progress',
             'new_status' => 'Resolved',
-            'comment' => 'Causa raiz corrigida e validada em producao',
         ]);
+    }
+
+    #[Test]
+    public function it_returns_404_when_updating_status_of_a_nonexistent_incident(): void
+    {
+        $response = $this->patchJson('/api/incidents/999999/status', [
+            'status' => 'In Progress',
+        ]);
+
+        $response->assertNotFound();
     }
 }

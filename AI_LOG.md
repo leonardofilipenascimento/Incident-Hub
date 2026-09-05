@@ -238,3 +238,23 @@ Correção aplicada: `CHALLENGE_PACK.md` substituído pelo texto oficial; `specs
 **Validação:** `docker compose up -d --build backend` + `migrate:fresh --seed --force` reconstruindo o schema do zero; `./vendor/bin/phpunit` → 23/23 GREEN; `curl /api/incidents` confirmando os 3 incidentes exatos exigidos; `curl /api/dashboard` confirmando as contagens corretas (1/1/1 com o seed); frontend reconstruído no Docker (`docker compose up -d --build frontend`) e validado com script Playwright — dashboard, listagem (título/severidade/responsável/status), detalhe, e a regra crítica bloqueando corretamente com a mensagem exata do documento oficial.
 
 **Decisão:** Manter o realinhamento completo — nenhuma funcionalidade fora do escopo oficial foi preservada, mesmo já estando implementada e testada, seguindo a Seção 22 do Challenge Pack ("funcionalidades extras não compensam requisitos obrigatórios que não funcionam"). Este episódio é registrado como o maior erro do projeto em `FINAL_REPORT.md` (pergunta 5).
+
+---
+
+## [11] Bug crítico: rodar a suíte de testes apagava o banco de demonstração
+
+**Objetivo:** Auditar o projeto completo contra `CHALLENGE_PACK.md` e `prompt-principal-hackathon-sdd.md` a pedido do desenvolvedor.
+
+**Contexto:** Durante a auditoria, o banco `incident_hub` (dev/demo, dentro do container Docker) apareceu vazio outra vez — o mesmo sintoma "misterioso" registrado (e nunca totalmente explicado) desde etapas anteriores do projeto. Desta vez foi investigado até a causa raiz, em vez de apenas re-executar o seed.
+
+**Instrução:** Investigação própria, disparada pela auditoria solicitada pelo desenvolvedor.
+
+**Resultado — causa raiz confirmada:** Dentro do container Docker, `docker-compose.yml` define `DB_DATABASE=incident_hub` como variável de ambiente real do processo, o que popula `$_SERVER['DB_DATABASE']` na inicialização do PHP. O override `<env name="DB_DATABASE" ... force="true"/>` do `phpunit.xml` só atualiza `$_ENV`/`putenv()` — nunca `$_SERVER`. O helper `env()` do Laravel lê `$_SERVER` com prioridade, então o override do PHPUnit era **silenciosamente ignorado dentro do Docker**: `config('database.connections.mysql.database')` continuava resolvendo `incident_hub` mesmo com `$_ENV`/`getenv()` corretamente mostrando `incident_hub_test`. Resultado prático: toda vez que a suíte completa rodava dentro do container (via `RefreshDatabase`, que executa `migrate:fresh`), ela **apagava o banco de desenvolvimento/demonstração** em vez do banco de teste. Localmente (fora do Docker) o bug não se manifestava, porque não há variável de ambiente real do SO conflitando — `DB_DATABASE` vem só do `.env` via Dotenv, sem popular `$_SERVER` antes do PHPUnit rodar.
+
+Diagnosticado com um teste descartável que imprimia `config()`, `$_ENV`, `$_SERVER` e `getenv()` lado a lado dentro de uma execução real do PHPUnit — a divergência entre `$_SERVER` (`incident_hub`, errado) e os demais (`incident_hub_test`, corretos) isolou a causa exata.
+
+**Correção:** `backend/tests/TestCase.php` agora sobrescreve `createApplication()` e muta `config('database.connections.mysql.database')` diretamente para `incident_hub_test` (mais `DB::purge('mysql')` para descartar qualquer conexão já resolvida), **antes** do `RefreshDatabase` migrar o schema. Essa mutação em PHP puro é imune ao problema de precedência `$_SERVER`/`$_ENV`, pois não depende de `env()`/variável de ambiente nenhuma. Removido do `phpunit.xml` o override de `DB_CONNECTION`/`DB_DATABASE` que não funcionava dentro do Docker (mantido um comentário explicando o porquê, para não ser reintroduzido por engano).
+
+**Validação:** banco `incident_hub` seedado com os 3 incidentes exigidos; suíte completa rodada (`docker compose exec backend ./vendor/bin/phpunit`, 23/23 GREEN); banco `incident_hub` conferido **imediatamente depois** — os 3 incidentes continuavam lá. Confirmado também que `incident_hub_test` tem o schema correto (sem a tabela `incident_affected_systems`, já removida) e 0 linhas após a suíte (esperado, pois `RefreshDatabase` roda cada teste em uma transação revertida). Repetido local (fora do Docker) para garantir que a correção não quebrou esse caminho: 23/23 GREEN.
+
+**Decisão:** Correção crítica para a entrega — sem ela, um avaliador que seguisse o `README.md` (`docker compose exec backend ./vendor/bin/phpunit`) apagaria os dados de demonstração exigidos pela Seção 11 do Challenge Pack sem perceber. Imagem Docker reconstruída com a correção definitiva.

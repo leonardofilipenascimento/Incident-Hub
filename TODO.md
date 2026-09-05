@@ -21,19 +21,20 @@ Derivado de `specs/spec-incidents.md`. Nenhum item de implementação deve ser i
 - [x] Criar Testes de Regra de Negócio — Regra 6 (comentário obrigatório em Closed)
 - [x] Criar Testes de Regra de Negócio — Regra 7 (registro automático de histórico, status e severidade)
 - [x] Confirmar suíte em estado RED (24 testes falhando por ausência de rotas/controllers, antes da implementação)
-- [ ] Criar Request `CreateIncidentRequest` com validações da seção 4 da SPEC
-- [ ] Criar Request `UpdateIncidentStatusRequest` com validações da seção 7 da SPEC
-- [ ] Criar Request `UpdateIncidentSeverityRequest` com validações da seção 8 da SPEC
-- [ ] Criar `IncidentController` — endpoint `POST /incidents`
-- [ ] Criar `IncidentController` — endpoint `GET /incidents` (filtros + busca textual + ordenação)
-- [ ] Criar `IncidentController` — endpoint `GET /incidents/{id}` (com histórico)
-- [ ] Criar `IncidentController` — endpoint `PATCH /incidents/{id}/status`
-- [ ] Criar `IncidentController` — endpoint `PATCH /incidents/{id}/severity`
-- [ ] Criar `IncidentResource` (transformação de resposta conforme payloads da SPEC)
-- [ ] Criar Seeder com no mínimo 5 incidentes (severidades e status variados, seção 11 da SPEC)
-- [ ] Validar respostas de erro e sucesso de todos os endpoints contra a SPEC
-- [ ] Rodar suíte completa de testes (PHPUnit) e confirmar 100% passando
-- [ ] Atualizar `AI_LOG.md` com o ciclo de implementação deste módulo
+- [x] Criar Request `StoreIncidentRequest` com validações da seção 4 da SPEC
+- [x] Criar Request `UpdateIncidentStatusRequest` com validações da seção 7 da SPEC
+- [x] Criar Request `UpdateIncidentSeverityRequest` com validações da seção 8 da SPEC
+- [x] Criar `IncidentService` com as regras de negócio (`validateStatusTransition`, `canChangeStatus`, `isCriticalIncident`, conforme `PadraoDeCodigo.md`)
+- [x] Criar `IncidentController` — endpoint `POST /incidents`
+- [x] Criar `IncidentController` — endpoint `GET /incidents` (filtros + busca textual + ordenação)
+- [x] Criar `IncidentController` — endpoint `GET /incidents/{id}` (com histórico)
+- [x] Criar `IncidentController` — endpoint `PATCH /incidents/{id}/status`
+- [x] Criar `IncidentController` — endpoint `PATCH /incidents/{id}/severity`
+- [x] Criar `IncidentResource` e `IncidentStatusHistoryResource` (transformação de resposta conforme payloads da SPEC)
+- [x] Criar Seeder (`IncidentSeeder`) com 5 incidentes cobrindo as 4 severidades e os 4 status (seção 11 da SPEC)
+- [x] Validar respostas de erro e sucesso de todos os endpoints contra a SPEC
+- [x] Rodar suíte completa de testes (PHPUnit) e confirmar 100% passando (26/26 GREEN)
+- [x] Atualizar `AI_LOG.md` com o ciclo de implementação deste módulo
 
 ## Frontend — Feature: Gestão de Incidentes (consumo de specs/spec-incidents.md)
 

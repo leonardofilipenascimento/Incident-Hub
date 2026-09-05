@@ -81,3 +81,28 @@ Passo TEST FIRST do ciclo SDD (Seção 4): criação do schema de domínio (migr
 - Criar `DatabaseSeeder`/`IncidentSeeder` com no mínimo 5 incidentes (RT02).
 
 **Nenhuma sugestão foi rejeitada nesta etapa**, além da remoção do Sanctum (auto-instalado, não solicitado).
+
+---
+
+## [04] Implementação (IMPLEMENT) e correção do desvio no PadraoDeCodigo.md
+
+**Data:** 2026-09-05
+
+**Contexto:**
+Passo IMPLEMENT do ciclo SDD: construção de Requests, Service, Controller, Resources e rotas para satisfazer os 24 testes de contrato/regra de negócio escritos na entrada [03], levando a suíte de RED para GREEN.
+
+**Decisões e ações tomadas:**
+- Corrigido o desvio identificado na entrada [03]: `PadraoDeCodigo.md` (Seção 6) atualizado para incluir o status `Closed` e alinhar o exemplo de enum PHP ao PascalCase (`IncidentStatus::Open`, `::InProgress`, `::Resolved`, `::Closed`) já usado no código, em vez do `SCREAMING_SNAKE_CASE` originalmente sugerido no documento.
+- Regras de negócio (Regras 1–7 da SPEC) implementadas em `App\Services\IncidentService`, com os nomes de método sugeridos literalmente por `PadraoDeCodigo.md` (Seções 5, 8 e 9): `validateStatusTransition()`, `canChangeStatus()`, `isCriticalIncident()`, `updateIncidentStatus()`, `updateIncidentSeverity()`, `createIncident()`, `listIncidents()`. Controllers permaneceram enxutos, delegando à service (Seção 9 do documento).
+- Violações de regra de negócio (Regras 2, 3, 4) lançam `Illuminate\Validation\ValidationException::withMessages()` a partir da service, reaproveitando o mecanismo padrão do Laravel para produzir o payload `{ message, errors: { campo: [...] } }` — mesmo formato usado pelas validações de shape das Form Requests (Seção 10 da SPEC), sem necessidade de exception/response customizados.
+- Comentário obrigatório em transições para `Resolved`/`Closed` (Regras 5 e 6) implementado como validação condicional (`Rule::requiredIf`) diretamente em `UpdateIncidentStatusRequest`, por depender apenas do valor de entrada (`status` do próprio request), não do estado atual do incidente.
+- `IncidentResource` configurado com `$wrap = null` (sem envelope `data` em respostas de recurso único), enquanto o `IncidentController::index()` envolve a coleção manualmente em `{ "data": [...] }`, para casar exatamente com os exemplos de payload de `specs/spec-incidents.md` (único objeto sem envelope vs. listagem com `data`). **Desvio leve assumido:** o `IncidentResource` retorna `description` também na listagem, embora o exemplo ilustrativo da SPEC (seção 5) não incluísse esse campo — optou-se por uma única classe de Resource para os dois casos em vez de duas variações, evitando duplicação sem valor funcional (Seção 22).
+- 404 customizado ("Incidente nao encontrado.") exigiu registrar o `render()` para `Symfony\Component\HttpKernel\NotFoundHttpException` (verificando `getPrevious() instanceof ModelNotFoundException`), e não para `ModelNotFoundException` diretamente — o Handler padrão do Laravel já converte essa exceção antes de despachar para os renderers customizados.
+- `IncidentSeeder` criado com 5 incidentes cobrindo as 4 severidades e os 4 status (`Open`, `In Progress`, `Resolved`, `Closed`), construído via `IncidentService` (reaproveitando as mesmas regras de transição, garantindo seeds sempre válidos). `DatabaseSeeder` atualizado para chamar `IncidentSeeder` no lugar do usuário de demonstração padrão do Laravel (fora do escopo do Challenge Pack).
+- Suíte completa validada em **estado GREEN**: 26/26 testes passando (24 de incidentes + 2 padrão do Laravel), rodando contra MySQL real (`incident_hub_test`).
+- `TODO.md` atualizado marcando todos os itens de backend do módulo de Incidentes como concluídos.
+
+**Pendências identificadas:**
+- Nenhuma pendência de backend para o módulo de Incidentes. Próximo passo: frontend (Next.js) consumindo os contratos de `specs/spec-incidents.md`, ou revisão/aceite do desenvolvedor antes de avançar.
+
+**Nenhuma sugestão foi rejeitada nesta etapa.**

@@ -4,6 +4,23 @@ Aplicação web para registro e acompanhamento de incidentes operacionais: cadas
 
 Contratos de API completos em [`specs/spec-incidents.md`](specs/spec-incidents.md). Histórico de decisões em [`AI_LOG.md`](AI_LOG.md) e [`PLAN.md`](PLAN.md).
 
+## Documentos do repositório
+
+Entregáveis exigidos pelo desafio:
+
+- [`START.md`](START.md) — nome, horário de início e ferramentas de IA.
+- [`PLAN.md`](PLAN.md) — planejamento inicial (entendimento, escopo, decisões técnicas, riscos).
+- [`AI_LOG.md`](AI_LOG.md) — histórico das interações relevantes com IA durante o desenvolvimento.
+- [`FINAL_REPORT.md`](FINAL_REPORT.md) — relatório final (as 15 perguntas do desafio).
+- `README.md` — este arquivo.
+
+Documentos adicionais (processo interno de Spec-Driven Development, não exigidos pelo desafio, mantidos para transparência):
+
+- [`CHALLENGE_PACK.md`](CHALLENGE_PACK.md) — cópia do enunciado oficial do desafio.
+- [`specs/spec-incidents.md`](specs/spec-incidents.md) — contrato técnico da API derivado do Challenge Pack.
+- [`TODO.md`](TODO.md) — checklist de tarefas derivado da spec.
+- `prompt-principal-hackathon-sdd.md`, `PadraoDeCodigo.md`, `padroes-nomenclatura.md`, `conventional-commits.md` — guias internos de metodologia e padrão de código usados para conduzir o desenvolvimento com IA; não fazem parte do enunciado do desafio.
+
 ## Pré-requisitos
 
 - **Com Docker (recomendado):** Docker e Docker Compose.

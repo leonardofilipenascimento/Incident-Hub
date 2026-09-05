@@ -188,3 +188,27 @@ Desenvolvedor testou manualmente todos os endpoints via Postman e pediu para eu 
 **Pendências identificadas:** nenhuma.
 
 **Nenhuma sugestão foi rejeitada nesta etapa** (achado corrigido, não uma sugestão em aberto).
+
+---
+
+## [09] Implementação do frontend (Next.js) consumindo specs/spec-incidents.md
+
+**Data:** 2026-09-05
+
+**Contexto:**
+Passo IMPLEMENT do frontend, cobrindo os 6 itens de `TODO.md`: listagem com filtros/busca, criação, detalhe com histórico, transição de status, alteração de severidade e tratamento visual de erros 422/404. Sem SPEC nova — reaproveita integralmente `specs/spec-incidents.md`.
+
+**Decisões e ações tomadas:**
+- Estrutura: `src/types/incident.ts` (tipos espelhando os schemas da SPEC), `src/lib/api.ts` (`fetchIncidents`, `fetchIncident`, `createIncident`, `updateIncidentStatus`, `updateIncidentSeverity`, todos com nomes literais sugeridos por `PadraoDeCodigo.md` Seção 19), `src/hooks/useIncidents`/`useIncident` (hooks sugeridos na mesma seção), componentes `IncidentList`, `IncidentFilters`, `IncidentForm`, `IncidentDetails`, `IncidentTimeline`, `IncidentStatusBadge`, `IncidentSeverityBadge` — nomenclatura idêntica aos exemplos do documento.
+- Optado por Client Components (`"use client"`) em vez de Server Components para toda a parte interativa, já que o próprio `PadraoDeCodigo.md` sugere hooks de data-fetching client-side (`useIncidents()`/`useIncident()`) em vez do padrão `async function Page()` de Server Component. Mantém um único padrão de fetching em todo o app (Seção 25 — simplicidade).
+- **Ajuste de infraestrutura necessário:** variáveis `NEXT_PUBLIC_*` do Next.js são embutidas em **build time**, não runtime; o `docker-compose.yml` original passava `NEXT_PUBLIC_API_URL` via `environment:` (efeito nenhum, pois o build já tinha terminado). Corrigido: `frontend/Dockerfile` recebe `ARG NEXT_PUBLIC_API_URL` e `docker-compose.yml` passa via `build.args`. Adicionado `frontend/.env.example` (e exceção no `.gitignore`, que antes ignorava `.env.example` também por engano) para desenvolvimento local.
+- **Erro de lint real corrigido, não suprimido às cegas:** `eslint-plugin-react-hooks` (regra nova `set-state-in-effect`, parte do conjunto de regras do React Compiler, vinda com Next.js 16/React 19.2) reprova `setLoading(true)`/`setError(null)` síncronos no corpo de um `useEffect` de data-fetching — o mesmo padrão documentado oficialmente em react.dev ("Synchronizing with Effects — Fetching data"). Decisão: suprimir pontualmente com `eslint-disable`/`eslint-enable` bem comentado, em vez de reescrever com `useReducer`/refs só para satisfazer a regra sem ganho real (Seção 22 — anti-overengineering).
+- Formulário de criação usa um único campo de texto para `affected_systems` (separado por vírgula) em vez de uma UI dinâmica de adicionar/remover itens — solução mais simples que atende ao contrato (array de strings) sem complexidade extra de estado (Seção 25).
+- **Validação end-to-end real no navegador** (não só `npm run build`/`tsc`): como não havia `chromium-cli` disponível no ambiente, usei Playwright diretamente (script descartável) para: build de produção + `docker compose up --build frontend`, e também `npm run dev` local. Fluxos verificados com screenshot: listagem com os 5 seeds, filtro por severidade, detalhe com histórico, criação de incidente com redirecionamento, erro 422 exibido inline no formulário de transição de status (mensagem exata da API), e transição de status bem-sucedida atualizando badge e timeline em tempo real. Zero erros de console em todos os fluxos.
+- **Achado incidental durante a validação (ambiente, não código):** o banco de desenvolvimento (`incident_hub`) estava com 0 registros ao iniciar esta etapa, apesar do registro na entrada [08] de tê-lo resetado — schema intacto, dados ausentes; causa exata não identificada com certeza (hipótese mais provável: o container MySQL foi recriado em algum momento anterior, ao ter sua configuração de volumes alterada, e a reinicialização subsequente do volume nomeado — ainda que sem indício de recriação nos logs — não deixou rastro conclusivo). Sem impacto real: dado de seed é descartável por definição. Resolvido com `php artisan db:seed` e, ao final, `migrate:fresh --seed` para deixar os ids previsíveis (1–5) nesta situação.
+- Container `frontend` do `docker-compose.yml` reconstruído com o novo código (antes rodava o template padrão do `create-next-app`, pois nunca havia sido rebuildado desde a entrada [05]).
+
+**Pendências identificadas:**
+- Nenhuma pendência de escopo. Frontend cobre os 6 itens do TODO. Possível melhoria futura não solicitada: UI dedicada para múltiplos `affected_systems` em vez de texto separado por vírgula — não implementada por não ser exigida e por manter a simplicidade.
+
+**Nenhuma sugestão foi rejeitada nesta etapa.**

@@ -38,9 +38,10 @@ Derivado de `specs/spec-incidents.md`. Nenhum item de implementação deve ser i
 
 ## Frontend — Feature: Gestão de Incidentes (consumo de specs/spec-incidents.md)
 
-- [ ] Tela de listagem de incidentes (RF04): ordenação, filtros por severidade/status, busca textual
-- [ ] Tela de criação de incidente (RF01)
-- [ ] Tela de detalhe do incidente com timeline/histórico (RF03)
-- [ ] Ação de transição de status (respeitando mensagens de erro 422 da SPEC)
-- [ ] Ação de alteração de severidade
-- [ ] Tratamento visual dos erros retornados pela API (422/404) conforme payloads da SPEC
+- [x] Tela de listagem de incidentes (RF04): ordenação, filtros por severidade/status, busca textual
+- [x] Tela de criação de incidente (RF01)
+- [x] Tela de detalhe do incidente com timeline/histórico (RF03)
+- [x] Ação de transição de status (respeitando mensagens de erro 422 da SPEC)
+- [x] Ação de alteração de severidade
+- [x] Tratamento visual dos erros retornados pela API (422/404) conforme payloads da SPEC
+- [x] Validado end-to-end no navegador (Playwright): listagem, filtro, detalhe+historico, criação, erro 422 inline, transição de status com atualização de timeline — build de produção (`docker compose`) e `npm run dev` local, zero erros de console

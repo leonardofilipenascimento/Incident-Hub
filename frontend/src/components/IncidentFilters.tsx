@@ -33,13 +33,6 @@ export function IncidentFilters({ filters, onChange }: IncidentFiltersProps) {
           </option>
         ))}
       </select>
-
-      <input
-        type="search"
-        placeholder="Buscar por titulo ou descricao..."
-        value={filters.search ?? ""}
-        onChange={(event) => onChange({ ...filters, search: event.target.value })}
-      />
     </div>
   );
 }

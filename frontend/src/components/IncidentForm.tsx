@@ -11,7 +11,7 @@ export function IncidentForm() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [severity, setSeverity] = useState<IncidentSeverity>("Low");
-  const [affectedSystems, setAffectedSystems] = useState("");
+  const [owner, setOwner] = useState("");
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
   const [generalError, setGeneralError] = useState<string | null>(null);
@@ -23,15 +23,7 @@ export function IncidentForm() {
     setGeneralError(null);
 
     try {
-      const incident = await createIncident({
-        title,
-        description,
-        severity,
-        affected_systems: affectedSystems
-          .split(",")
-          .map((system) => system.trim())
-          .filter((system) => system.length > 0),
-      });
+      const incident = await createIncident({ title, description, severity, owner });
 
       router.push(`/incidents/${incident.id}`);
     } catch (err) {
@@ -87,13 +79,9 @@ export function IncidentForm() {
       </label>
 
       <label>
-        Sistemas afetados (separados por virgula)
-        <input
-          value={affectedSystems}
-          onChange={(event) => setAffectedSystems(event.target.value)}
-          placeholder="payment-gateway, checkout-api"
-        />
-        {errors.affected_systems?.map((message) => (
+        Responsavel
+        <input value={owner} onChange={(event) => setOwner(event.target.value)} placeholder="Nome do responsavel" />
+        {errors.owner?.map((message) => (
           <span key={message} className="field-error">
             {message}
           </span>

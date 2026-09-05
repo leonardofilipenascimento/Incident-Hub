@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { DashboardSummary } from "@/components/DashboardSummary";
 import { IncidentFilters } from "@/components/IncidentFilters";
 import { IncidentList } from "@/components/IncidentList";
 import { useIncidents } from "@/hooks/useIncidents";
@@ -9,14 +10,7 @@ import type { IncidentFilters as Filters } from "@/types/incident";
 
 export default function Home() {
   const [filters, setFilters] = useState<Filters>({});
-  const [debouncedFilters, setDebouncedFilters] = useState<Filters>({});
-
-  useEffect(() => {
-    const timeout = setTimeout(() => setDebouncedFilters(filters), 300);
-    return () => clearTimeout(timeout);
-  }, [filters]);
-
-  const { incidents, loading, error } = useIncidents(debouncedFilters);
+  const { incidents, loading, error } = useIncidents(filters);
 
   return (
     <main className="page">
@@ -27,6 +21,7 @@ export default function Home() {
         </Link>
       </header>
 
+      <DashboardSummary />
       <IncidentFilters filters={filters} onChange={setFilters} />
       <IncidentList incidents={incidents} loading={loading} error={error} />
     </main>

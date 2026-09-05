@@ -4,8 +4,8 @@ import { useState, type FormEvent } from "react";
 import { IncidentSeverityBadge } from "@/components/IncidentSeverityBadge";
 import { IncidentStatusBadge } from "@/components/IncidentStatusBadge";
 import { IncidentTimeline } from "@/components/IncidentTimeline";
-import { ApiError, updateIncidentSeverity, updateIncidentStatus } from "@/lib/api";
-import { INCIDENT_SEVERITIES, INCIDENT_STATUSES, type Incident, type IncidentSeverity, type IncidentStatus } from "@/types/incident";
+import { ApiError, updateIncidentStatus } from "@/lib/api";
+import { INCIDENT_STATUSES, type Incident, type IncidentStatus } from "@/types/incident";
 
 interface IncidentDetailsProps {
   incident: Incident;
@@ -13,8 +13,6 @@ interface IncidentDetailsProps {
 }
 
 export function IncidentDetails({ incident, onUpdated }: IncidentDetailsProps) {
-  const isClosed = incident.status === "Closed";
-
   return (
     <div className="incident-details">
       <header>
@@ -28,14 +26,17 @@ export function IncidentDetails({ incident, onUpdated }: IncidentDetailsProps) {
       <p>{incident.description}</p>
 
       <p>
-        <strong>Sistemas afetados:</strong> {incident.affected_systems.join(", ")}
+        <strong>Responsavel:</strong> {incident.owner}
+      </p>
+      <p>
+        <strong>Criado em:</strong> {new Date(incident.created_at).toLocaleString("pt-BR")}
+      </p>
+      <p>
+        <strong>Ultima atualizacao:</strong> {new Date(incident.updated_at).toLocaleString("pt-BR")}
       </p>
 
-      {isClosed && <p className="hint">Incidente fechado — status e severidade nao podem mais ser alterados.</p>}
-
       <div className="actions">
-        <StatusForm incident={incident} disabled={isClosed} onUpdated={onUpdated} />
-        <SeverityForm incident={incident} disabled={isClosed} onUpdated={onUpdated} />
+        <StatusForm incident={incident} onUpdated={onUpdated} />
       </div>
 
       <section>
@@ -46,17 +47,8 @@ export function IncidentDetails({ incident, onUpdated }: IncidentDetailsProps) {
   );
 }
 
-function StatusForm({
-  incident,
-  disabled,
-  onUpdated,
-}: {
-  incident: Incident;
-  disabled: boolean;
-  onUpdated: () => void;
-}) {
+function StatusForm({ incident, onUpdated }: { incident: Incident; onUpdated: () => void }) {
   const [status, setStatus] = useState<IncidentStatus>(incident.status);
-  const [comment, setComment] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -66,8 +58,7 @@ function StatusForm({
     setError(null);
 
     try {
-      await updateIncidentStatus(incident.id, { status, comment: comment || undefined });
-      setComment("");
+      await updateIncidentStatus(incident.id, { status });
       onUpdated();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Nao foi possivel atualizar o status.");
@@ -83,7 +74,7 @@ function StatusForm({
 
       <label>
         Novo status
-        <select value={status} onChange={(event) => setStatus(event.target.value as IncidentStatus)} disabled={disabled}>
+        <select value={status} onChange={(event) => setStatus(event.target.value as IncidentStatus)}>
           {INCIDENT_STATUSES.map((option) => (
             <option key={option} value={option}>
               {option}
@@ -92,71 +83,8 @@ function StatusForm({
         </select>
       </label>
 
-      <label>
-        Comentario (obrigatorio para Resolved/Closed)
-        <textarea value={comment} onChange={(event) => setComment(event.target.value)} rows={2} disabled={disabled} />
-      </label>
-
-      <button type="submit" disabled={disabled || submitting}>
+      <button type="submit" disabled={submitting}>
         {submitting ? "Salvando..." : "Atualizar status"}
-      </button>
-    </form>
-  );
-}
-
-function SeverityForm({
-  incident,
-  disabled,
-  onUpdated,
-}: {
-  incident: Incident;
-  disabled: boolean;
-  onUpdated: () => void;
-}) {
-  const [severity, setSeverity] = useState<IncidentSeverity>(incident.severity);
-  const [comment, setComment] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  async function handleSubmit(event: FormEvent) {
-    event.preventDefault();
-    setSubmitting(true);
-    setError(null);
-
-    try {
-      await updateIncidentSeverity(incident.id, { severity, comment: comment || undefined });
-      setComment("");
-      onUpdated();
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Nao foi possivel atualizar a severidade.");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <form className="action-form" onSubmit={handleSubmit}>
-      <h3>Alterar severidade</h3>
-      {error && <p className="error-message">{error}</p>}
-
-      <label>
-        Nova severidade
-        <select value={severity} onChange={(event) => setSeverity(event.target.value as IncidentSeverity)} disabled={disabled}>
-          {INCIDENT_SEVERITIES.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <label>
-        Comentario (opcional)
-        <textarea value={comment} onChange={(event) => setComment(event.target.value)} rows={2} disabled={disabled} />
-      </label>
-
-      <button type="submit" disabled={disabled || submitting}>
-        {submitting ? "Salvando..." : "Atualizar severidade"}
       </button>
     </form>
   );

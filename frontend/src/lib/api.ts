@@ -1,8 +1,8 @@
 import type {
   CreateIncidentPayload,
+  DashboardSummary,
   Incident,
   IncidentFilters,
-  UpdateIncidentSeverityPayload,
   UpdateIncidentStatusPayload,
 } from "@/types/incident";
 
@@ -48,7 +48,6 @@ function buildQueryString(filters: IncidentFilters): string {
 
   if (filters.severity) params.set("severity", filters.severity);
   if (filters.status) params.set("status", filters.status);
-  if (filters.search) params.set("search", filters.search);
 
   const query = params.toString();
   return query ? `?${query}` : "";
@@ -82,12 +81,6 @@ export async function updateIncidentStatus(
   });
 }
 
-export async function updateIncidentSeverity(
-  id: number,
-  payload: UpdateIncidentSeverityPayload
-): Promise<Incident> {
-  return request<Incident>(`/incidents/${id}/severity`, {
-    method: "PATCH",
-    body: JSON.stringify(payload),
-  });
+export async function fetchDashboardSummary(): Promise<DashboardSummary> {
+  return request<DashboardSummary>("/dashboard");
 }

@@ -30,8 +30,8 @@ export function IncidentList({ incidents, loading, error }: IncidentListProps) {
         <tr>
           <th>Titulo</th>
           <th>Severidade</th>
+          <th>Responsavel</th>
           <th>Status</th>
-          <th>Sistemas afetados</th>
           <th>Criado em</th>
         </tr>
       </thead>
@@ -44,10 +44,10 @@ export function IncidentList({ incidents, loading, error }: IncidentListProps) {
             <td>
               <IncidentSeverityBadge severity={incident.severity} />
             </td>
+            <td>{incident.owner}</td>
             <td>
               <IncidentStatusBadge status={incident.status} />
             </td>
-            <td>{incident.affected_systems.join(", ")}</td>
             <td>{new Date(incident.created_at).toLocaleString("pt-BR")}</td>
           </tr>
         ))}

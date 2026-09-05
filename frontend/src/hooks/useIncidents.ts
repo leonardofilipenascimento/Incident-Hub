@@ -46,7 +46,7 @@ export function useIncidents(filters: IncidentFilters): UseIncidentsResult {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.severity, filters.status, filters.search, reloadToken]);
+  }, [filters.severity, filters.status, reloadToken]);
 
   return { incidents, loading, error, refetch };
 }

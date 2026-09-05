@@ -140,12 +140,47 @@ a {
 .badge-status-open { background: #2563eb; }
 .badge-status-in-progress { background: #d97706; }
 .badge-status-resolved { background: #16a34a; }
-.badge-status-closed { background: #4b5563; }
 
 .badge-severity-low { background: #16a34a; }
 .badge-severity-medium { background: #d97706; }
 .badge-severity-high { background: #ea580c; }
 .badge-severity-critical { background: #b91c1c; }
+
+.dashboard-cards {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.dashboard-card {
+  flex: 1;
+  min-width: 160px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.dashboard-card-value {
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.dashboard-card-label {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.dashboard-card-critical .dashboard-card-value {
+  color: var(--danger);
+}
+
+.dashboard-card-resolved .dashboard-card-value {
+  color: #16a34a;
+}
 
 .incident-form,
 .action-form {

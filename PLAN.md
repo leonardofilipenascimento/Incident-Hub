@@ -15,6 +15,7 @@ O **Incident Hub** é uma plataforma web para registro, acompanhamento, categori
 | RT01 — Arquitetura Desacoplada | Infraestrutura/Arquitetura | (não gera SPEC de domínio — decisão técnica, seção 4 deste PLAN) |
 | RT02 — Banco de Dados Relacional (migrations + seeders) | Persistência | `specs/spec-incidents.md` (seção Schema) + seeders |
 | RT03/RT04 — Validações e Respostas de API | Incidentes (contratos) | `specs/spec-incidents.md` (seções Validações e Erros) |
+| Critério de Aceite 3 — Persistência após reinicialização de containers | Infraestrutura/Containerização | (não gera SPEC de domínio — decisão técnica, seção 4.1 deste PLAN) |
 
 Todo o escopo funcional do Challenge Pack (RF01–RF04) está concentrado em um único módulo de domínio, **Incidentes**, incluindo seu histórico — não há necessidade de módulos adicionais (ex.: autenticação) pois o Challenge Pack não os exige. Evita-se assim overengineering (Seção 22 do prompt principal).
 
@@ -52,6 +53,17 @@ Eloquent
       ↓
 MySQL
 ```
+
+### 4.1 Containerização (Docker)
+
+O Challenge Pack menciona explicitamente, no Critério de Aceite 3, que "o sistema deve manter a consistência dos dados após a reinicialização dos containers/servidores" — decisão de containerizar via Docker/Docker Compose para atender esse critério de forma verificável, ainda que não estivesse detalhada como requisito técnico explícito (RT).
+
+- Um `Dockerfile` por aplicação (`backend/Dockerfile`, `frontend/Dockerfile`), orquestrados por um único `docker-compose.yml` na raiz do repositório.
+- **backend**: `php:8.3-cli-alpine` + extensão `pdo_mysql`, Composer instalado com dependências completas (inclui `require-dev`, necessário para rodar PHPUnit dentro do container e evitar descompasso entre o manifest de pacotes cacheado e os pacotes instalados). Entrypoint roda `php artisan migrate --force` (idempotente) antes de subir o servidor embutido do Laravel (`artisan serve`).
+- **frontend**: build multi-stage com `node:22-alpine`, compilando com `npm run build` e servindo com `next start`.
+- **mysql**: imagem oficial `mysql:8.0`, com volume nomeado (`mysql_data`) garantindo persistência entre reinicializações — validado manualmente restartando os containers e confirmando que os dados seedados permanecem.
+- Seed **não** roda automaticamente no entrypoint (evita duplicar dados a cada restart); é executado manualmente uma vez via `docker compose exec backend php artisan db:seed`.
+- Porta do MySQL mapeada para `3307` no host (em vez de `3306`) para não colidir com uma instância local de MySQL já em uso na máquina de desenvolvimento; a comunicação interna entre os containers `backend`↔`mysql` continua na porta `3306` padrão, via rede Docker.
 
 ### Estrutura de pastas
 

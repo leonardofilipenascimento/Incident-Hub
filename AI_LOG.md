@@ -106,3 +106,28 @@ Passo IMPLEMENT do ciclo SDD: construção de Requests, Service, Controller, Res
 - Nenhuma pendência de backend para o módulo de Incidentes. Próximo passo: frontend (Next.js) consumindo os contratos de `specs/spec-incidents.md`, ou revisão/aceite do desenvolvedor antes de avançar.
 
 **Nenhuma sugestão foi rejeitada nesta etapa.**
+
+---
+
+## [05] Containerização (Docker) — requisito não mapeado originalmente no PLAN.md
+
+**Data:** 2026-09-05
+
+**Contexto:**
+O desenvolvedor apontou que o planejamento inicial não incluía containerização. Ao reverificar `CHALLENGE_PACK.md`, o Critério de Aceite 3 já exigia explicitamente: "O sistema deve manter a consistência dos dados após a reinicialização dos containers/servidores" — ou seja, Docker não é uma adição fora de escopo, é um requisito do Challenge Pack (fonte primária de verdade) que não havia sido mapeado no `PLAN.md` original.
+
+**Decisões e ações tomadas:**
+- `PLAN.md` atualizado (nova seção 4.1) com a decisão de containerização e sua justificativa, e a tabela de mapeamento Challenge Pack → Módulos (seção 2) passou a referenciar o Critério de Aceite 3.
+- Criados `backend/Dockerfile` (PHP 8.3 CLI Alpine + `pdo_mysql`, Composer com dependências completas, `artisan serve` como servidor), `backend/docker-entrypoint.sh` (roda `migrate --force` de forma idempotente antes de subir o servidor) e `backend/.dockerignore`.
+- **Desvio corrigido durante a validação:** a primeira versão do Dockerfile usava `composer install --no-dev`, mas o `bootstrap/cache/packages.php` gerado localmente (com dependências de desenvolvimento, ex. `laravel/pail`) foi copiado para dentro da imagem, causando `Class "Laravel\Pail\PailServiceProvider" not found` e crash-loop do container. Corrigido instalando também as dependências de desenvolvimento na imagem (mais simples que gerenciar cache de manifest de pacotes) e adicionando `bootstrap/cache/*.php` ao `.dockerignore` para evitar recorrência. Efeito colateral aceito: a imagem de produção inclui PHPUnit e outras dev deps — decisão consciente para um contexto de hackathon, favorecendo simplicidade e permitindo ao avaliador rodar os testes dentro do container.
+- Criados `frontend/Dockerfile` (build multi-stage `node:22-alpine`, `npm run build` + `next start`) e `frontend/.dockerignore`.
+- Criado `docker-compose.yml` na raiz com 3 serviços (`mysql`, `backend`, `frontend`), volume nomeado `mysql_data` para persistência, healthcheck do MySQL controlando a ordem de subida (`depends_on: condition: service_healthy`).
+- Porta do MySQL mapeada para `3307:3306` no host, para não colidir com a instância local de MySQL já usada no ambiente de desenvolvimento (a comunicação interna `backend↔mysql` permanece em `3306` via rede Docker).
+- Seed não roda automaticamente no entrypoint (evitaria duplicar dados a cada restart); documentado como passo manual único (`docker compose exec backend php artisan db:seed`).
+- **Validado de ponta a ponta:** `docker compose up -d --build` sobe os 3 containers; API respondendo em `:8000`, frontend em `:3000`; seed executado com sucesso via `exec`; **persistência confirmada na prática** — reiniciados os containers `mysql` e `backend` (`docker compose restart`) e os 5 incidentes seedados continuaram presentes, satisfazendo literalmente o Critério de Aceite 3.
+- Criado `README.md` (Seção 17 do prompt principal, pendente desde o início do projeto) com instruções de execução via Docker e localmente, e onde encontrar a SPEC.
+
+**Pendências identificadas:**
+- Nenhuma relacionada a este ciclo. Containers seguem rodando localmente para inspeção do desenvolvedor.
+
+**Nenhuma sugestão foi rejeitada nesta etapa**, além da correção do próprio erro de build (`--no-dev` revertido).
